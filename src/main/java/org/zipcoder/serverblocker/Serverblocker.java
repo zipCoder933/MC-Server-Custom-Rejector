@@ -1,47 +1,62 @@
-package org.zipcoder.serverblocker;
+package org.zipcoder.serverBlocker;
 
-import com.mojang.logging.LogUtils;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import org.slf4j.Logger;
+import com.google.gson.Gson;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.plugin.java.JavaPlugin;
 
-// The value here should match an entry in the META-INF/mods.toml file
-@Mod(Serverblocker.MODID)
-public class Serverblocker {
+import java.io.*;
 
-    // Define mod id in a common place for everything to reference
-    public static final String MODID = "serverblocker";
-    // Directly reference a slf4j logger
-    private static final Logger LOGGER = LogUtils.getLogger();
+public final class ServerBlocker extends JavaPlugin implements Listener {
 
+    private PluginConfig config;
 
-    public Serverblocker() {
-        MinecraftForge.EVENT_BUS.register(this);
+    @Override
+    public void onEnable() {
+        saveDefaultJsonConfig("config.json");
+        loadJsonConfig();
 
-        // Register our mod's ForgeConfigSpec so that Forge can create and load the config file for us
-        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SERVER_CONFIG);
+        getServer().getPluginManager().registerEvents(this, this);
+        getLogger().info("Plugin enabled. Server name: " + config.server_name);
     }
 
-    @SubscribeEvent
-    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        LOGGER.info("HELLO from player logging in");
-        ServerPlayer player = (ServerPlayer) event.getEntity();
-        String name = player.getName().getString();
-        player.connection.disconnect(
-                Component.literal("You are not allowed to join this server."));
+    private void saveDefaultJsonConfig(String filename) {
+        File configFile = new File(getDataFolder(), filename);
+        if (!configFile.exists()) {
+            getDataFolder().mkdirs();
+            try (Reader in = new InputStreamReader(getResource(filename));
+                 FileWriter out = new FileWriter(configFile)) {
+                in.transferTo(out);
+            } catch (Exception e) {
+                getLogger().severe("Failed to save default config.json: " + e.getMessage());
+            }
+        }
     }
 
-    // You can use SubscribeEvent and let the Event Bus discover methods to call
-    @SubscribeEvent
-    public void onServerStarting(ServerStartingEvent event) {
-        // Do something when the server starts
-        LOGGER.info("HELLO from server starting");
+    private void loadJsonConfig() {
+        File configFile = new File(getDataFolder(), "config.json");
+        try (FileReader reader = new FileReader(configFile)) {
+            this.config = new Gson().fromJson(reader, PluginConfig.class);
+        } catch (Exception e) {
+            getLogger().severe("Failed to load config.json: " + e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerLogin(PlayerLoginEvent event) {
+        event.disallow(PlayerLoginEvent.Result.KICK_OTHER, config.custom_message);
+
+        //send webhook
+        DiscordWebhook webhook = new DiscordWebhook(config.discord_webhook_url);
+        webhook.setUsername("Server Entrance Bot");
+        webhook.setContent("**" + event.getPlayer().getName() + "** has attempted to join server **" + config.server_name + "**.");
+        try {
+            webhook.execute();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 }
