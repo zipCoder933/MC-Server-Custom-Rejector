@@ -1,0 +1,40 @@
+package org.zipcoder.serverblocker;
+
+import net.minecraftforge.common.ForgeConfigSpec;
+import org.apache.commons.lang3.tuple.Pair;
+
+public class Config {
+
+    public static class Common {
+        public final ForgeConfigSpec.ConfigValue<String> rejectionMessage;
+        public final ForgeConfigSpec.ConfigValue<String> discordWebhookUrl;
+        public final ForgeConfigSpec.ConfigValue<String> joinMessage;
+
+        Common(ForgeConfigSpec.Builder builder) {
+            builder.comment("General server config").push("server");
+
+            rejectionMessage = builder
+                    .comment("Message shown to rejected players")
+                    .define("rejectionMessage", "You are not allowed to join this server.");
+
+            discordWebhookUrl = builder
+                    .comment("Discord Webhook URL for join notifications")
+                    .define("discordWebhookUrl", "https://discord.com/api/webhooks/your_webhook_here");
+
+            joinMessage = builder
+                    .comment("Message to broadcast or send on player join")
+                    .define("joinMessage", "Player %PLAYER% has joined the server.");
+
+            builder.pop();
+        }
+    }
+
+    public static final ForgeConfigSpec SERVER_CONFIG;
+    public static final Common SERVER;
+
+    static {
+        final Pair<Common, ForgeConfigSpec> specPair = new ForgeConfigSpec.Builder().configure(Common::new);
+        SERVER_CONFIG = specPair.getRight();
+        SERVER = specPair.getLeft();
+    }
+}
