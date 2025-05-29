@@ -6,7 +6,7 @@
 
     <groupId>org.zipcoder</groupId>
     <artifactId>serverblocker</artifactId>
-    <version>1.0.0</version>
+    <version>1.21.5-v1</version>
     <packaging>jar</packaging>
 
     <name>serverblocker</name>
