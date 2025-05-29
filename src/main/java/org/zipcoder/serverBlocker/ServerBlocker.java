@@ -14,35 +14,33 @@ public final class ServerBlocker extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
-        saveDefaultJsonConfig("config.json");
-        loadJsonConfig();
-
+        config = loadOrCreateConfig();
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("Plugin enabled. Server name: " + config.server_name);
     }
 
-    private void saveDefaultJsonConfig(String filename) {
-        File configFile = new File(getDataFolder(), filename);
-        if (!configFile.exists()) {
-            getDataFolder().mkdirs();
-            try (Reader in = new InputStreamReader(getResource(filename));
-                 FileWriter out = new FileWriter(configFile)) {
-                in.transferTo(out);
+    private PluginConfig loadOrCreateConfig() {
+        getLogger().info("Loading config.json");
+        File file = new File("config.json");
+        Gson gson = new Gson();
+
+        if (!file.exists()) {
+            try (FileWriter out = new FileWriter(file)) {
+                gson.toJson(new PluginConfig(), out);
+                getLogger().info("Created default config.json");
             } catch (Exception e) {
-                getLogger().severe("Failed to save default config.json: " + e.getMessage());
+                getLogger().severe("Failed to create config.json: " + e.getMessage());
             }
+        }
+
+        try (FileReader reader = new FileReader(file)) {
+            return gson.fromJson(reader, PluginConfig.class);
+        } catch (Exception e) {
+            getLogger().severe("Failed to load config.json: " + e.getMessage());
+            return new PluginConfig();
         }
     }
 
-    private void loadJsonConfig() {
-        File configFile = new File(getDataFolder(), "config.json");
-        try (FileReader reader = new FileReader(configFile)) {
-            this.config = new Gson().fromJson(reader, PluginConfig.class);
-        } catch (Exception e) {
-            getLogger().severe("Failed to load config.json: " + e.getMessage());
-            getServer().getPluginManager().disablePlugin(this);
-        }
-    }
 
     @EventHandler
     public void onPlayerLogin(PlayerLoginEvent event) {
@@ -55,7 +53,7 @@ public final class ServerBlocker extends JavaPlugin implements Listener {
         try {
             webhook.execute();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Failed to send webhook: " + e.getMessage());
         }
 
     }
