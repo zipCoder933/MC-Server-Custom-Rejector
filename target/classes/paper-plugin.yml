@@ -1,0 +1,4 @@
+name: serverBlocker
+version: '1.0.0'
+main: org.zipcoder.serverBlocker.ServerBlocker
+api-version: '1.21'

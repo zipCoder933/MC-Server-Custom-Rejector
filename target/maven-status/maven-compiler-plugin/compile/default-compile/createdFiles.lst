@@ -1,0 +1,11 @@
+org\zipcoder\serverBlocker\DiscordWebhook$EmbedObject$Author.class
+org\zipcoder\serverBlocker\DiscordWebhook$EmbedObject$Thumbnail.class
+org\zipcoder\serverBlocker\DiscordWebhook$JSONObject.class
+org\zipcoder\serverBlocker\DiscordWebhook.class
+org\zipcoder\serverBlocker\DiscordWebhook$EmbedObject.class
+org\zipcoder\serverBlocker\PluginConfig.class
+org\zipcoder\serverBlocker\ServerBlocker.class
+org\zipcoder\serverBlocker\DiscordWebhook$EmbedObject$Field.class
+org\zipcoder\serverBlocker\DiscordWebhook$EmbedObject$Image.class
+org\zipcoder\serverBlocker\DiscordWebhook$JSONArray.class
+org\zipcoder\serverBlocker\DiscordWebhook$EmbedObject$Footer.class
