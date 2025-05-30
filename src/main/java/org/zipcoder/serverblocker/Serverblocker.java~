@@ -41,7 +41,7 @@ public class Serverblocker {
 
             player.connection.disconnect(
                     Component.literal(Config.SERVER.rejectionMessage.get()));
-
+            
 
             DiscordWebhook webhook = new DiscordWebhook(Config.SERVER.discordWebhookUrl.get());
             webhook.setUsername("Server Entrance Bot");
