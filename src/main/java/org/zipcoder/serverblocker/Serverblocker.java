@@ -12,6 +12,8 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import org.slf4j.Logger;
 
+import java.io.IOException;
+
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(Serverblocker.MODID)
 public class Serverblocker {
@@ -29,13 +31,28 @@ public class Serverblocker {
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SERVER_CONFIG);
     }
 
-    @SubscribeEvent
-    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        LOGGER.info("HELLO from player logging in");
-        ServerPlayer player = (ServerPlayer) event.getEntity();
-        String name = player.getName().getString();
-        player.connection.disconnect(
-                Component.literal("You are not allowed to join this server."));
+    @Mod.EventBusSubscriber
+    public static class EventHandler {
+
+        @SubscribeEvent
+        public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+            LOGGER.info("HELLO from player logging in");
+            ServerPlayer player = (ServerPlayer) event.getEntity();
+            String name = player.getName().getString();
+
+            player.connection.disconnect(
+                    Component.literal(Config.SERVER.rejectionMessage.get()));
+
+            DiscordWebhook webhook = new DiscordWebhook(Config.SERVER.discordWebhookUrl.get());
+            webhook.setUsername("Server Entrance Bot");
+            webhook.setContent("**" + name + "** has attempted to join server **" +
+                    Config.SERVER.serverName.get() + "**.");
+            try {
+                webhook.execute();
+            } catch (IOException e) {
+                System.out.println("Failed to send webhook: " + e.getMessage());
+            }
+        }
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call

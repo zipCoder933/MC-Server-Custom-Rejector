@@ -8,22 +8,26 @@ public class Config {
     public static class Common {
         public final ForgeConfigSpec.ConfigValue<String> rejectionMessage;
         public final ForgeConfigSpec.ConfigValue<String> discordWebhookUrl;
-        public final ForgeConfigSpec.ConfigValue<String> joinMessage;
+        public final ForgeConfigSpec.ConfigValue<String> serverName;
 
         Common(ForgeConfigSpec.Builder builder) {
             builder.comment("General server config").push("server");
 
             rejectionMessage = builder
                     .comment("Message shown to rejected players")
-                    .define("rejectionMessage", "You are not allowed to join this server.");
+                    .define("rejectionMessage", "Hang tight! The server is starting up!");
 
             discordWebhookUrl = builder
                     .comment("Discord Webhook URL for join notifications")
-                    .define("discordWebhookUrl", "https://discord.com/api/webhooks/your_webhook_here");
+                    .define("discordWebhookUrl",
+                            "https://discordapp.com/api/webhooks/1377479606822506656/F8vv6GxZrJ8VAs8sO7ZKAlRTKDHOaqRP2LJrjZgDPY3iw4WLf24SUFJc8aFL1UYg3Uen");
 
-            joinMessage = builder
-                    .comment("Message to broadcast or send on player join")
-                    .define("joinMessage", "Player %PLAYER% has joined the server.");
+            serverName = builder
+                    .comment("Name of the server")
+                    .define("serverName",
+                            "Vanilla");
+
+
 
             builder.pop();
         }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.zipcoder.serverblocker.main.iml" filepath="$PROJECT_DIR$/.idea/modules/org.zipcoder.serverblocker.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/org.zipcoder.serverblocker.test.iml" filepath="$PROJECT_DIR$/.idea/modules/org.zipcoder.serverblocker.test.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/serverblocker.main.iml" filepath="$PROJECT_DIR$/.idea/modules/serverblocker.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/serverblocker.test.iml" filepath="$PROJECT_DIR$/.idea/modules/serverblocker.test.iml" />
+    </modules>
+  </component>
+</project>
