@@ -19,13 +19,11 @@ public class Config {
 
             discordWebhookUrl = builder
                     .comment("Discord Webhook URL for join notifications")
-                    .define("discordWebhookUrl",
-                            "https://discordapp.com/api/webhooks/1377479606822506656/F8vv6GxZrJ8VAs8sO7ZKAlRTKDHOaqRP2LJrjZgDPY3iw4WLf24SUFJc8aFL1UYg3Uen");
+                    .define("discordWebhookUrl", "https://discord.com/api/webhooks/your_webhook_here");
 
             serverName = builder
                     .comment("Name of the server")
-                    .define("serverName",
-                            "Vanilla");
+                    .define("serverName", "Vanilla");
 
 
 
