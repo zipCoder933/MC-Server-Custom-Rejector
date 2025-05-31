@@ -19,22 +19,34 @@ public class FakeMinecraftServer {
     public static void runServer(Server server) {
         try (ServerSocket serverSocket = new ServerSocket(server.port)) {
             System.out.println("Fake server running on port " + server.port);
-            handleMemory();
+            DataInputStream in;
+            DataOutputStream out;
 
             while (true) {
+                handleMemory();
                 try (Socket socket = serverSocket.accept()) {
                     System.out.println("Connection from " + socket.getInetAddress());
 
-                    DataInputStream in = new DataInputStream(socket.getInputStream());
-                    DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+                    in = new DataInputStream(socket.getInputStream());
+                    out = new DataOutputStream(socket.getOutputStream());
 
                     // === Handshake Packet ===
+                    // Step 1: Read Handshake
                     int packetLength = readVarInt(in);
-                    int packetId = readVarInt(in);  // Should be 0 (Handshake)
-                    int protocolVersion = readVarInt(in);  // Protocol version
-                    String serverAddress = readString(in);
-                    int serverPort = in.readUnsignedShort();
-                    int nextState = readVarInt(in);  // 1 = status, 2 = login
+                    byte[] handshakeData = new byte[packetLength];
+                    in.readFully(handshakeData);
+                    DataInputStream handshakeIn = new DataInputStream(new ByteArrayInputStream(handshakeData));
+
+                    // Step 2: Process Handshake
+                    int packetId = readVarInt(handshakeIn);  // should be 0
+                    int protocolVersion = readVarInt(handshakeIn);
+                    String serverAddress = readString(handshakeIn);
+                    int serverPort = handshakeIn.readUnsignedShort();
+                    int nextState = readVarInt(handshakeIn);
+
+                    System.out.println("Packet length: " + packetLength);
+                    System.out.println("Packet ID: " + packetId);
+                    System.out.println("Next state: " + nextState);
 
 
                     if (nextState == 1) { // status request
