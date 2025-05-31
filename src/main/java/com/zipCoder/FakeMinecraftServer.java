@@ -9,7 +9,7 @@ public class FakeMinecraftServer {
     static Config config = Config.loadConfig();
     static String version = "watcher v1.1.0";
 
-    private static void log(String message) {
+    private static void packetLog(String message) {
         System.out.println(message);
     }
 
@@ -34,17 +34,26 @@ public class FakeMinecraftServer {
 
                     // === Handshake Packet ===
                     int packetLength = readVarInt(in);
-                    log("\tPacket Length: " + packetLength);
+                    packetLog("\tPacket Length: " + packetLength);
                     int packetId = readVarInt(in);  // Should be 0 (Handshake)
-                    log("\tPacket ID: " + packetId);
+                    packetLog("\tPacket ID: " + packetId);
+
+                    //We can ignore packets we dont care about to prevent errors
+                    if (packetId != 0 && packetId != 1) return;
+                    /**
+                     * Handshake (packet ID 0) — to get the protocol version and next state,
+                     * Status packets (e.g., status request ID 0, ping ID 1),
+                     * Player connection packets (usually Login Start packet with a specific ID),
+                     */
+
                     int protocolVersion = readVarInt(in);  // Protocol version
-                    log("\tProtocol Version: " + protocolVersion);
+                    packetLog("\tProtocol Version: " + protocolVersion);
                     String serverAddress = readString(in);
-                    log("\tServer Address: " + serverAddress);
+                    packetLog("\tServer Address: " + serverAddress);
                     int serverPort = in.readUnsignedShort();
-                    log("\tServer Port: " + serverPort);
+                    packetLog("\tServer Port: " + serverPort);
                     int nextState = readVarInt(in);  // 1 = status, 2 = login
-                    log("\tNext State: " + nextState);
+                    packetLog("\tNext State: " + nextState);
 
 
                     if (nextState == 1) { // status request
@@ -55,7 +64,7 @@ public class FakeMinecraftServer {
                         packetLength = readVarInt(in);
                         packetId = readVarInt(in);  // Should be 0 (Login Start)
                         String username = readString(in);
-                        log("\tUser: " + username);
+                        packetLog("\tUser: " + username);
 
                         // === Send Login Disconnect ===
                         try {
@@ -130,9 +139,9 @@ public class FakeMinecraftServer {
     private static void respondWithStatus(Server server, DataInputStream in, DataOutputStream out, int protocolVersion) throws IOException {
         // Wait for Status Request packet (ID 0x00)
         int statusLength = readVarInt(in);
-        log("\tStatus Length: " + statusLength);
+        packetLog("\tStatus Length: " + statusLength);
         int statusPacketId = readVarInt(in);
-        log("\tStatus Packet ID: " + statusPacketId);
+        packetLog("\tStatus Packet ID: " + statusPacketId);
         if (statusPacketId == 0x00) {
             // Build response JSON
             String responseJson = "{"
@@ -154,9 +163,9 @@ public class FakeMinecraftServer {
         }
 
         int pingLength = readVarInt(in);
-        log("\tPing Length: " + pingLength);
+        packetLog("\tPing Length: " + pingLength);
         int pingPacketId = readVarInt(in);
-        log("\tPing Packet ID: " + pingPacketId);
+        packetLog("\tPing Packet ID: " + pingPacketId);
         if (pingPacketId == 0x01) {
             long payload = in.readLong();
             ByteArrayOutputStream pingBuffer = new ByteArrayOutputStream();
