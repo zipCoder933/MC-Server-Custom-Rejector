@@ -26,64 +26,70 @@ public class FakeMinecraftServer {
                     DataInputStream in = new DataInputStream(socket.getInputStream());
                     DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
-                    try {
-                        // === Handshake Packet ===
-                        int packetLength = readVarInt(in);
-                        int packetId = readVarInt(in);  // Should be 0 (Handshake)
-                        int protocolVersion = readVarInt(in);  // Protocol version
-                        String serverAddress = readString(in);
-                        int serverPort = in.readUnsignedShort();
-                        int nextState = readVarInt(in);  // 1 = status, 2 = login
+                    // === Handshake Packet ===
+                    int packetLength = readVarInt(in);
+                    int packetId = readVarInt(in);  // Should be 0 (Handshake)
+                    int protocolVersion = readVarInt(in);  // Protocol version
+                    String serverAddress = readString(in);
+                    int serverPort = in.readUnsignedShort();
+                    int nextState = readVarInt(in);  // 1 = status, 2 = login
 
 
-                        if (nextState == 1) { // status request
-                            if (config.handleStatusRequests) respondWithStatus(server, in, out, protocolVersion);
-                        } else if (nextState == 2) { //Login request
-                            // === Login Start Packet ===
-                            packetLength = readVarInt(in);
-                            packetId = readVarInt(in);  // Should be 0 (Login Start)
-                            String username = readString(in);
-                            System.out.println("User: " + username);
+                    if (nextState == 1) { // status request
+                        if (config.handleStatusRequests) respondWithStatus(server, in, out, protocolVersion);
+                    } else if (nextState == 2) { //Login request
 
-                            // === Send Login Disconnect ===
-                            try {
-                                String json = "{\"text\":\"" + config.rejectMessage + "\"}";
-                                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-                                DataOutputStream packet = new DataOutputStream(buffer);
-                                packet.writeByte(0x00); // Login Disconnect packet ID
-                                writeString(packet, json);
-                                sendPacket(out, buffer.toByteArray());
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
+                        // === Login Start Packet ===
+                        packetLength = readVarInt(in);
+                        packetId = readVarInt(in);  // Should be 0 (Login Start)
+                        String username = readString(in);
+                        System.out.println("User: " + username);
 
-                            // === Send discord webhook ===
-                            try {
-                                DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
-                                webhook.setUsername("Watcher App");
-                                webhook.setContent("Player **" + username + "** wants to join server **" + server.name + "**");
-                                webhook.execute();
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
+                        // === Send Login Disconnect ===
+                        try {
+                            String json = "{\"text\":\"" + config.rejectMessage + "\"}";
+                            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                            DataOutputStream packet = new DataOutputStream(buffer);
+                            packet.writeByte(0x00); // Login Disconnect packet ID
+                            writeString(packet, json);
+                            sendPacket(out, buffer.toByteArray());
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
 
-                        socket.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        socket.close();
+                        // === Send discord webhook ===
+                        try {
+                            DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
+                            webhook.setUsername("Watcher App");
+                            webhook.setContent("Player **" + username + "** wants to join server **" + server.name + "**");
+                            webhook.execute();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
-        } catch (IOException e) {
-            System.err.println("Error running server " + server.port + ": " + e.getMessage());
-            throw new RuntimeException(e);
-//            e.printStackTrace();
-//            try {
-//                Thread.sleep(5000);
-//            } catch (InterruptedException ex) {
-//            }
-//            runServer(server);
+        } catch (Exception e) {
+            try {//Print/send error message
+                System.err.println("Error running server (restarting) " + server.port + ": " + e.getMessage());
+                DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
+                webhook.setUsername("Watcher App");
+                String content = "Error running server (restarting) " + server.port + ": " + e.getMessage() + "\n";
+                for (StackTraceElement element : e.getStackTrace()) content += element.toString() + "\n";
+                webhook.setContent(content);
+                webhook.execute();
+            } catch (Exception ignored) {
+            }
+
+            try {//wait
+                Thread.sleep(30000);
+            } catch (InterruptedException ex) {
+            }
+
+            runServer(server); //restart
         }
     }
 
