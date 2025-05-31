@@ -74,12 +74,13 @@ public class FakeMinecraftServer {
             }
         } catch (IOException e) {
             System.err.println("Error running server " + server.port + ": " + e.getMessage());
-            e.printStackTrace();
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException ex) {
-            }
-            runServer(server);
+            throw new RuntimeException(e);
+//            e.printStackTrace();
+//            try {
+//                Thread.sleep(5000);
+//            } catch (InterruptedException ex) {
+//            }
+//            runServer(server);
         }
     }
 
