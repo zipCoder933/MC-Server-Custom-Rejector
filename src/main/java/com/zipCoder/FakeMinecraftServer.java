@@ -16,9 +16,9 @@ public class FakeMinecraftServer {
     }
 
     public static void runServer(Server server) {
-        try {
-            ServerSocket serverSocket = new ServerSocket(server.port);
+        try (ServerSocket serverSocket = new ServerSocket(server.port)) {
             System.out.println("Fake server running on port " + server.port);
+
             while (true) {
                 try (Socket socket = serverSocket.accept()) {
                     System.out.println("Connection from " + socket.getInetAddress());
@@ -72,6 +72,8 @@ public class FakeMinecraftServer {
                     e.printStackTrace();
                 }
             }
+
+
         } catch (Exception e) {
             try {//Print/send error message
                 System.err.println("Error running server (restarting) " + server.port + ": " + e.getMessage());
