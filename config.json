@@ -4,6 +4,10 @@
   "servers": [
     {
       "name": "Vanilla",
+      "port": 17353
+    },
+    {
+      "name": "Vanilla",
       "port": 25565
     }
   ]

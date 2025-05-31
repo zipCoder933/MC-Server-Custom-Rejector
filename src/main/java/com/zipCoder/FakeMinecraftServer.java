@@ -9,9 +9,9 @@ public class FakeMinecraftServer {
     static Config config = Config.loadConfig();
 
     public static void main(String[] args) throws IOException {
-        Config config = new Config();
+        System.out.println(config + "\n");
         for (Server server : config.servers) {
-            (new Thread(()-> runServer(server))).start();
+            (new Thread(() -> runServer(server))).start();
         }
     }
 

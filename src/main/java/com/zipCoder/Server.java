@@ -9,5 +9,13 @@ public class Server {
         this.port = port;
     }
 
-    public Server(){}
+    public Server() {
+    }
+
+    public String toString() {
+        return "Server{" +
+                "name='" + name + '\'' +
+                ", port=" + port +
+                '}';
+    }
 }
