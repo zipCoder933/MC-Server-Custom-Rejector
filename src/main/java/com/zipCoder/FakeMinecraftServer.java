@@ -7,9 +7,10 @@ import java.nio.charset.StandardCharsets;
 public class FakeMinecraftServer {
 
     static Config config = Config.loadConfig();
+    static String version = "watcher v1.0.0";
 
     public static void main(String[] args) throws IOException {
-        System.out.println(config + "\n");
+        System.out.println(version);
         for (Server server : config.servers) {
             (new Thread(() -> runServer(server))).start();
         }
@@ -18,6 +19,7 @@ public class FakeMinecraftServer {
     public static void runServer(Server server) {
         try (ServerSocket serverSocket = new ServerSocket(server.port)) {
             System.out.println("Fake server running on port " + server.port);
+            handleMemory();
 
             while (true) {
                 try (Socket socket = serverSocket.accept()) {
@@ -76,11 +78,15 @@ public class FakeMinecraftServer {
 
         } catch (Exception e) {
             try {//Print/send error message
-                System.err.println("Error running server (restarting) " + server.port + ": " + e.getMessage());
+                String message = e.getMessage() == null ? "Unknown error" : e.getMessage();
                 DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
                 webhook.setUsername("Watcher App");
-                String content = "Error running server (restarting) " + server.port + ": " + e.getMessage() + "\n";
-                for (StackTraceElement element : e.getStackTrace()) content += element.toString() + "\n";
+                String content = "Error running server (restarting) " + server.port + ": " + message + "\n";
+                try {
+                    for (StackTraceElement element : e.getStackTrace()) content += element.toString() + "\n";
+                } catch (Exception ignored) {
+                }
+                System.out.println(content);
                 webhook.setContent(content);
                 webhook.execute();
             } catch (Exception ignored) {
@@ -93,6 +99,22 @@ public class FakeMinecraftServer {
 
             runServer(server); //restart
         }
+    }
+
+    private static void handleMemory() {
+        System.gc();
+
+        Runtime runtime = Runtime.getRuntime();
+        // Total memory currently in use by JVM (in bytes)
+        long totalMemory = runtime.totalMemory();
+        // Free memory within the total memory (in bytes)
+        long freeMemory = runtime.freeMemory();
+        // Used memory = totalMemory - freeMemory
+        long usedMemory = totalMemory - freeMemory;
+        // Max memory the JVM will attempt to use (in bytes)
+        long maxMemory = runtime.maxMemory();
+        double percent = (double) usedMemory / maxMemory * 100.0;
+        System.out.printf("Memory Usage: %.2f%%\n", percent);
     }
 
     private static void respondWithStatus(Server server, DataInputStream in, DataOutputStream out, int protocolVersion) throws IOException {
