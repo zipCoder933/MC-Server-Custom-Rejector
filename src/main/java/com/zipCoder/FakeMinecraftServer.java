@@ -19,34 +19,28 @@ public class FakeMinecraftServer {
     public static void runServer(Server server) {
         try (ServerSocket serverSocket = new ServerSocket(server.port)) {
             System.out.println("Fake server running on port " + server.port);
-            DataInputStream in;
-            DataOutputStream out;
 
             while (true) {
                 handleMemory();
                 try (Socket socket = serverSocket.accept()) {
                     System.out.println("Connection from " + socket.getInetAddress());
 
-                    in = new DataInputStream(socket.getInputStream());
-                    out = new DataOutputStream(socket.getOutputStream());
+                    DataInputStream in = new DataInputStream(socket.getInputStream());
+                    DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
                     // === Handshake Packet ===
-                    // Step 1: Read Handshake
                     int packetLength = readVarInt(in);
-                    byte[] handshakeData = new byte[packetLength];
-                    in.readFully(handshakeData);
-                    DataInputStream handshakeIn = new DataInputStream(new ByteArrayInputStream(handshakeData));
-
-                    // Step 2: Process Handshake
-                    int packetId = readVarInt(handshakeIn);  // should be 0
-                    int protocolVersion = readVarInt(handshakeIn);
-                    String serverAddress = readString(handshakeIn);
-                    int serverPort = handshakeIn.readUnsignedShort();
-                    int nextState = readVarInt(handshakeIn);
-
-                    System.out.println("Packet length: " + packetLength);
-                    System.out.println("Packet ID: " + packetId);
-                    System.out.println("Next state: " + nextState);
+                    System.out.println("\tPacket Length: " + packetLength);
+                    int packetId = readVarInt(in);  // Should be 0 (Handshake)
+                    System.out.println("\tPacket ID: " + packetId);
+                    int protocolVersion = readVarInt(in);  // Protocol version
+                    System.out.println("\tProtocol Version: " + protocolVersion);
+                    String serverAddress = readString(in);
+                    System.out.println("\tServer Address: " + serverAddress);
+                    int serverPort = in.readUnsignedShort();
+                    System.out.println("\tServer Port: " + serverPort);
+                    int nextState = readVarInt(in);  // 1 = status, 2 = login
+                    System.out.println("\tNext State: " + nextState);
 
 
                     if (nextState == 1) { // status request
@@ -57,7 +51,7 @@ public class FakeMinecraftServer {
                         packetLength = readVarInt(in);
                         packetId = readVarInt(in);  // Should be 0 (Login Start)
                         String username = readString(in);
-                        System.out.println("User: " + username);
+                        System.out.println("\tUser: " + username);
 
                         // === Send Login Disconnect ===
                         try {
