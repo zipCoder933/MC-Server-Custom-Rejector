@@ -16,24 +16,15 @@ public class Config {
     public String discordWebhook = "https://discordapp.com/api/webhooks/1377479606822506656/F8vv6GxZrJ8VAs8sO7ZKAlRTKDHOaqRP2LJrjZgDPY3iw4WLf24SUFJc8aFL1UYg3Uen";
     public String rejectMessage = "§cHang tight! The server should be up and running soon.";
     public Server[] servers = new Server[]{
-            new Server("Vanilla", 25565, "1.20.1",763, "A Minecraft Server", 20)
+            new Server("Vanilla", 25565, "1.20.1",  "A Minecraft Server", 20)
     };
-    /**
-     * | Minecraft Version | Protocol Version |
-     * | ----------------- | ---------------- |
-     * | 1.16.5            | 754              |
-     * | 1.17.1            | 756              |
-     * | 1.18.2            | 758              |
-     * | 1.19.4            | 762              |
-     * | **1.20.1**        | **763**          |
-     * | 1.20.4            | 765              |
-     * | 1.20.5            | 766              |
-     */
+    public boolean handleStatusRequests = true;
 
 
     // === Internal stuff ===
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path SETTINGS_PATH = Paths.get(System.getProperty("user.dir"), "config.json");
+
 
     private static void save(Config settings) {
         try (Writer writer = Files.newBufferedWriter(SETTINGS_PATH)) {
@@ -64,6 +55,7 @@ public class Config {
                 "\ndiscordWebhook='" + discordWebhook +
                 "\nrejectMessage='" + rejectMessage +
                 "\nservers=" + Arrays.toString(servers) +
+                "\nhandleStatusRequests=" + handleStatusRequests +
                 '}';
     }
 

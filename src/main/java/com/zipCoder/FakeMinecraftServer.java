@@ -37,7 +37,7 @@ public class FakeMinecraftServer {
 
 
                         if (nextState == 1) { // status request
-                            respondWithStatus(server, in, out);
+                            if (config.handleStatusRequests) respondWithStatus(server, in, out, protocolVersion);
                         } else if (nextState == 2) { //Login request
                             // === Login Start Packet ===
                             packetLength = readVarInt(in);
@@ -87,14 +87,14 @@ public class FakeMinecraftServer {
         }
     }
 
-    private static void respondWithStatus(Server server, DataInputStream in, DataOutputStream out) throws IOException {
+    private static void respondWithStatus(Server server, DataInputStream in, DataOutputStream out, int protocolVersion) throws IOException {
         // Wait for Status Request packet (ID 0x00)
         int statusLength = readVarInt(in);
         int statusPacketId = readVarInt(in);
         if (statusPacketId == 0x00) {
             // Build response JSON
             String responseJson = "{"
-                    + "\"version\":{\"name\":\"" + server.version + "\",\"protocol\":" + server.protocolVersion + "},"
+                    + "\"version\":{\"name\":\"" + server.version + "\",\"protocol\":" + protocolVersion + "},"
                     + "\"players\":{\"max\":" + server.maxPlayers + ",\"online\":0,\"sample\":[]},"
                     + "\"description\":{\"text\":\"" + server.title + "\"}"
                     + "}";
