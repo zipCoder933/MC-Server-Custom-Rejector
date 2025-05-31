@@ -35,7 +35,10 @@ public class FakeMinecraftServer {
                         int serverPort = in.readUnsignedShort();
                         int nextState = readVarInt(in);  // 1 = status, 2 = login
 
-                        if (nextState == 2) {
+
+                        if (nextState == 1) { // status request
+                            respondWithStatus(server, in, out);
+                        } else if (nextState == 2) { //Login request
                             // === Login Start Packet ===
                             packetLength = readVarInt(in);
                             packetId = readVarInt(in);  // Should be 0 (Login Start)
@@ -81,6 +84,38 @@ public class FakeMinecraftServer {
 //            } catch (InterruptedException ex) {
 //            }
 //            runServer(server);
+        }
+    }
+
+    private static void respondWithStatus(Server server, DataInputStream in, DataOutputStream out) throws IOException {
+        // Wait for Status Request packet (ID 0x00)
+        int statusLength = readVarInt(in);
+        int statusPacketId = readVarInt(in);
+        if (statusPacketId == 0x00) {
+            // Build response JSON
+            String responseJson = "{"
+                    + "\"version\":{\"name\":\"" + server.version + "\",\"protocol\":" + server.protocolVersion + "},"
+                    + "\"players\":{\"max\":" + server.maxPlayers + ",\"online\":0,\"sample\":[]},"
+                    + "\"description\":{\"text\":\"" + server.title + "\"}"
+                    + "}";
+
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            DataOutputStream packet = new DataOutputStream(buffer);
+            packet.writeByte(0x00); // Status Response ID
+            writeString(packet, responseJson);
+            sendPacket(out, buffer.toByteArray());
+        }
+
+        // Wait for Ping packet (ID 0x01) and respond with Pong
+        int pingLength = readVarInt(in);
+        int pingPacketId = readVarInt(in);
+        if (pingPacketId == 0x01) {
+            long payload = in.readLong();
+            ByteArrayOutputStream pingBuffer = new ByteArrayOutputStream();
+            DataOutputStream pingPacket = new DataOutputStream(pingBuffer);
+            pingPacket.writeByte(0x01); // Pong Response ID
+            pingPacket.writeLong(payload);
+            sendPacket(out, pingBuffer.toByteArray());
         }
     }
 
