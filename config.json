@@ -1,0 +1,10 @@
+{
+  "discordWebhook": "https://discordapp.com/api/webhooks/1377479606822506656/F8vv6GxZrJ8VAs8sO7ZKAlRTKDHOaqRP2LJrjZgDPY3iw4WLf24SUFJc8aFL1UYg3Uen",
+  "rejectMessage": "§cHang Tight! The server is starting up...",
+  "servers": [
+    {
+      "name": "Vanilla",
+      "port": 25565
+    }
+  ]
+}
