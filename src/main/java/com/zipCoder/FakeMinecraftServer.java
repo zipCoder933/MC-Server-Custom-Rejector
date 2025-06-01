@@ -16,8 +16,8 @@ public class FakeMinecraftServer {
     public static void main(String[] args) {
         System.out.println(version);
 
-        java.util.concurrent.Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(
-                FakeMinecraftServer::handleMemory, 0, 1, java.util.concurrent.TimeUnit.MINUTES);
+//        java.util.concurrent.Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(
+//                FakeMinecraftServer::handleMemory, 0, 1, java.util.concurrent.TimeUnit.MINUTES);
 
         for (Server server : config.servers) {
             (new Thread(() -> runServer(server))).start();
