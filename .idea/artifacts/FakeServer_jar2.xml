@@ -1,6 +1,6 @@
 <component name="ArtifactManager">
-  <artifact type="jar" build-on-make="true" name="FakeServer:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/FakeServer_jar</output-path>
+  <artifact type="jar" name="FakeServer:jar2">
+    <output-path>$PROJECT_DIR$/FakeServer_jar2</output-path>
     <root id="archive" name="FakeServer.jar">
       <element id="module-output" name="FakeServer" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/code/gson/gson/2.11.0/gson-2.11.0.jar" path-in-jar="/" />
