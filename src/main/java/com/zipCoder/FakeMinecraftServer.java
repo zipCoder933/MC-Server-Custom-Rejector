@@ -13,7 +13,7 @@ public class FakeMinecraftServer {
 //        System.out.println(message);
 //    }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         System.out.println(version);
 
         java.util.concurrent.Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(
