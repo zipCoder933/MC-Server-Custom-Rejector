@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 public class FakeMinecraftServer {
 
     static Config config = Config.loadConfig();
-    static String version = "watcher v1.2.0";
+    static String version = "watcher v1.3.0";
 
 //    private static void packetLog(String message) {
 //        System.out.println(message);
