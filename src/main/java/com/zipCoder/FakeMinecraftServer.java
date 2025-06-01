@@ -6,7 +6,17 @@ import java.nio.charset.StandardCharsets;
 
 public class FakeMinecraftServer {
 
-    static Config config = Config.loadConfig();
+    static Config config;
+
+    static {
+        try {
+            config = Config.loadConfig();
+        } catch (Exception e) {
+            System.err.println("Error loading settings: " + e.getMessage());
+            config = new Config();
+        }
+    }
+
     static String version = "watcher v1.3.0";
 
     private static void packetLog(String message) {
