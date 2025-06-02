@@ -26,7 +26,7 @@ public class FakeMinecraftServer {
 
     static {
         try {
-            FileHandler fileHandler = new FileHandler("latest.log", true);
+            FileHandler fileHandler = new FileHandler("latest.log", false);
             fileHandler.setFormatter(new SimpleFormatter());
             fileHandler.setLevel(Level.ALL);
             LOGGER.addHandler(fileHandler);
