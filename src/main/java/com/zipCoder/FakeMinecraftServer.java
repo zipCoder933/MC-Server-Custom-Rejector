@@ -2,6 +2,8 @@ package com.zipCoder;
 
 import java.io.*;
 import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +28,8 @@ public class FakeMinecraftServer {
 
     static {
         try {
+            Files.deleteIfExists(Paths.get("latest.log"));
+
             FileHandler fileHandler = new FileHandler("latest.log", false);
             fileHandler.setFormatter(new SimpleFormatter());
             fileHandler.setLevel(Level.ALL);
