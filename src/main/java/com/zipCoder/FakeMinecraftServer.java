@@ -20,10 +20,11 @@ public class FakeMinecraftServer {
         }
     }
 
-    static String version = "watcher v1.4.0";
+    static String version = "watcher v1.5.0";
 
-    private static void packetLog(String message) {
-        System.out.println(message);
+    private static void packetLog(String ke, Object value) {
+        String message = String.format("%s: %s", ke, value);
+        LOGGER.log(Level.INFO, message);
     }
 
     public static void main(String[] args) {
@@ -67,6 +68,7 @@ public class FakeMinecraftServer {
                     serverAddress = readString(in);
                     serverPort = in.readUnsignedShort();
                     nextState = readVarInt(in);  // 1 = status, 2 = login
+                    packetLog("nextState", nextState);
 
 
                     if (nextState == 1 && config.handleStatusRequests) {
@@ -145,28 +147,15 @@ public class FakeMinecraftServer {
 
 
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error running server (restarting) " + server.port, e);
+            LOGGER.log(Level.SEVERE, "Error running server" + server.port, e);
 
             try {
-                String message = e.getMessage() == null ? "Unknown error" : e.getMessage();
                 DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
                 webhook.setUsername("Watcher App");
-                String content = "Error running server (restarting) " + server.port + ": " + message + "\n";
-                try {
-                    for (StackTraceElement element : e.getStackTrace()) content += element.toString() + "\n";
-                } catch (Exception ignored) {
-                }
-                webhook.setContent(content);
+                webhook.setContent("Watcher app has encountered an error on port **" + server.port + "**\n" + e.getMessage());
                 webhook.execute();
             } catch (Exception ignored) {
             }
-
-            try {//wait
-                Thread.sleep(30000);
-            } catch (InterruptedException ex) {
-            }
-
-            runServer(server); //restart
         }
     }
 
