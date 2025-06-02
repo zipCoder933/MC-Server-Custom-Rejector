@@ -13,13 +13,16 @@ import static com.zipCoder.PacketUtils.*;
 
 /**
  * New-NetIPAddress -IPAddress 192.168.1.100 -PrefixLength 24 -DefaultGateway 192.168.1.1 -InterfaceIndex 4
- *
+ * <p>
  * (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -ne $null}).IPAddress
  */
 public class FakeMinecraftServer {
 
     static Config config;
     public final static Logger LOGGER = Logger.getLogger(FakeMinecraftServer.class.getName());
+
+
+    public static final String VERSION = "watcher v1.8.0";
     public final static int DEFAULT_PROTOCOL_VERSION = 763;
 
     static {
@@ -41,7 +44,6 @@ public class FakeMinecraftServer {
         }
     }
 
-    static String version = "watcher v1.8.0";
 
     private static void packetLog(String ke, Object value) {
         String message = String.format("\t%s: %s", ke, value);
@@ -49,7 +51,7 @@ public class FakeMinecraftServer {
     }
 
     public static void main(String[] args) {
-        System.out.println(version);
+        System.out.println(VERSION);
 
         Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(
                 MemoryUtils::handleMemory, 0, 1, TimeUnit.MINUTES);
@@ -103,12 +105,12 @@ public class FakeMinecraftServer {
 //    }
 
     public static void TCP_server(Server server) {
-        int packetLength = 0;
-        int packetId = 0;
-        int protocolVersion = DEFAULT_PROTOCOL_VERSION;
+        int packetLength;
+        int packetId;
+        int protocolVersion;
         int serverPort;
         String serverAddress;
-        int nextState = 1;
+        int nextState;
 
         try (ServerSocket serverSocket = new ServerSocket(server.port)) {
             System.out.println("Fake server running on port " + server.port);
@@ -131,7 +133,8 @@ public class FakeMinecraftServer {
                         packetLength = readVarInt(in);
                         System.out.println("\tPacket length: " + packetLength + "\tAvailable: " + in.available());
 
-                        if (packetLength > in.available()) { //Sometimes we get packets that are larger than the available data (254 bytes)
+                        if (in.available() == 0) {//TODO: Understand why this happens
+                            //Sometimes A client sends a STATUS request with 254 bytes, 0 available data
                             LOGGER.log(Level.WARNING, "Packet length is less than available data. Sending status response.");
                             respondStatus(server, protocolVersion, out);
                             continue;
@@ -223,14 +226,12 @@ public class FakeMinecraftServer {
                             }
                         }
 
-                    } catch (EOFException e) {
+                    } catch (Exception e) {
                         LOGGER.log(Level.SEVERE, "Error reading packet (Sending status response)", e);
                         //We frequently get EOF exceptions here, we need to be ready for them
                         //We cant know what the request was, so we just send all responses
-//                        respondLoginDisconnect(out, e.getMessage());
                         respondStatus(server, protocolVersion, out);
-                    } catch (Exception e) {
-                        LOGGER.log(Level.SEVERE, "Error handling packet", e);
+//                        respondLoginDisconnect(out, e.getMessage());
                     }
                 } catch (Exception e) {
                     LOGGER.log(Level.SEVERE, "Error handling packet", e);

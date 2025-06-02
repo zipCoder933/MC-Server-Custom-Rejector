@@ -17,6 +17,6 @@ public class MemoryUtils {
         // Max memory the JVM will attempt to use (in bytes)
         maxMemory = runtime.maxMemory();
         memoryPercent = (double) usedMemory / maxMemory * 100.0;
-        System.out.printf("Memory Used: %.2f%%\n", memoryPercent);
+        System.out.printf("Memory Used: %.1f%%\n", memoryPercent);
     }
 }
