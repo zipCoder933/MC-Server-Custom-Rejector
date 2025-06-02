@@ -14,7 +14,7 @@ public class FakeMinecraftServer {
 
     static Config config;
     public final static Logger LOGGER = Logger.getLogger(FakeMinecraftServer.class.getName());
-    
+
     static {
         try {
             FileHandler fileHandler = new FileHandler("latest.log", true);
@@ -38,7 +38,7 @@ public class FakeMinecraftServer {
 
     private static void packetLog(String ke, Object value) {
         String message = String.format("%s: %s", ke, value);
-        LOGGER.log(Level.INFO, message);
+        LOGGER.log(Level.FINE, message);
     }
 
     public static void main(String[] args) {
@@ -150,16 +150,12 @@ public class FakeMinecraftServer {
                             }
                         }
                     } catch (Exception e) {
-
-                        LOGGER.log(Level.SEVERE, "Error responding to client " + server.port + ": " + e.getMessage());
-
-                        LOGGER.info("Writing disconnect packet and status packet");
+                        LOGGER.log(Level.SEVERE, "Error responding to client " + server.port, e);
+                        LOGGER.info("Writing disconnect packet");
                         respondLoginDisconnect(out, e.getMessage());
-                        respondStatus(server, protocolVersion, out);
-
                     }
                 } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error responding to client " + server.port + ": " + e.getMessage());
+                    LOGGER.log(Level.SEVERE, "Error responding to client " + server.port, e);
                 } finally {
                     System.out.println("\tDone.");
                 }
@@ -167,7 +163,7 @@ public class FakeMinecraftServer {
 
 
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error running server" + server.port, e);
+            LOGGER.log(Level.SEVERE, "Error running server loop " + server.port, e);
 
             try {
                 DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
@@ -181,35 +177,36 @@ public class FakeMinecraftServer {
     }
 
 
-
     private static void respondLoginDisconnect(DataOutputStream out, String message) {
-        String json = "{\"text\":\"" + message + "\"}";
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        DataOutputStream packet = new DataOutputStream(buffer);
-
         try {
+            String json = "{\"text\":\"" + message + "\"}";
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            DataOutputStream packet = new DataOutputStream(buffer);
+
+
             packet.writeByte(0x00); // Login Disconnect packet ID
             writeString(packet, json);
             sendPacket(out, buffer.toByteArray());
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error responding to login request" + e.getMessage());
         }
     }
 
     private static void respondStatus(Server server, int protocolVersion, DataOutputStream out) {
-        String responseJson = "{"
-                + "\"version\":{\"name\":\"" + server.version + "\",\"protocol\":" + protocolVersion + "},"
-                + "\"players\":{\"max\":" + server.maxPlayers + ",\"online\":0,\"sample\":[]},"
-                + "\"description\":{\"text\":\"" + server.title + "\"}"
-                + "}";
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        DataOutputStream packet = new DataOutputStream(buffer);
-
         try {
+            String responseJson = "{"
+                    + "\"version\":{\"name\":\"" + server.version + "\",\"protocol\":" + protocolVersion + "},"
+                    + "\"players\":{\"max\":" + server.maxPlayers + ",\"online\":0,\"sample\":[]},"
+                    + "\"description\":{\"text\":\"" + server.title + "\"}"
+                    + "}";
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            DataOutputStream packet = new DataOutputStream(buffer);
+
+
             packet.writeByte(0x00); // Status Response ID
             writeString(packet, responseJson);
             sendPacket(out, buffer.toByteArray());
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error responding with status" + e.getMessage());
         }
     }
