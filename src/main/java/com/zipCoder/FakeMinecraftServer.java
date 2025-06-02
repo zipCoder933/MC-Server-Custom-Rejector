@@ -35,7 +35,7 @@ public class FakeMinecraftServer {
         }
     }
 
-    static String version = "watcher v1.5.0";
+    static String version = "watcher v1.6.0";
 
     private static void packetLog(String ke, Object value) {
         String message = String.format("\t%s: %s", ke, value);
@@ -178,6 +178,7 @@ public class FakeMinecraftServer {
             } catch (Exception ignored) {
                 LOGGER.log(Level.SEVERE, "Error sending webhook" + e.getMessage());
             }
+            System.exit(1);
         }
     }
 
