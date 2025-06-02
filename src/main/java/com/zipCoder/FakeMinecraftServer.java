@@ -2,7 +2,8 @@ package com.zipCoder;
 
 import java.io.*;
 import java.net.*;
-import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -10,6 +11,9 @@ import java.util.logging.SimpleFormatter;
 
 import static com.zipCoder.PacketUtils.*;
 
+/**
+ * New-NetIPAddress -IPAddress 192.168.1.100 -PrefixLength 24 -DefaultGateway 192.168.0.1 -InterfaceIndex 4
+ */
 public class FakeMinecraftServer {
 
     static Config config;
@@ -35,7 +39,7 @@ public class FakeMinecraftServer {
         }
     }
 
-    static String version = "watcher v1.6.0";
+    static String version = "watcher v1.7.0";
 
     private static void packetLog(String ke, Object value) {
         String message = String.format("\t%s: %s", ke, value);
@@ -45,15 +49,58 @@ public class FakeMinecraftServer {
     public static void main(String[] args) {
         System.out.println(version);
 
-        java.util.concurrent.Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(
-                MemoryUtils::handleMemory, 0, 1, java.util.concurrent.TimeUnit.MINUTES);
+        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(
+                MemoryUtils::handleMemory, 0, 1, TimeUnit.MINUTES);
 
         for (Server server : config.servers) {
-            (new Thread(() -> runServer(server))).start();
+            (new Thread(() -> TCP_server(server))).start();
         }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
+                webhook.setUsername("Watcher App");
+                webhook.setContent("Watcher app has terminated.");
+                webhook.execute();
+            } catch (Exception ignored) {
+                LOGGER.log(Level.SEVERE, "Error sending webhook", ignored);
+            }
+        }));
     }
 
-    public static void runServer(Server server) {
+//    public static void UDP_server(Server server) {
+//        try (DatagramSocket socket = new DatagramSocket(server.port)) {
+//            byte[] buffer = new byte[1024];
+//            System.out.println("UDP Server running on port " + server.port);
+//
+//            while (true) {
+//                try {
+//                    DatagramPacket request = new DatagramPacket(buffer, buffer.length);
+//                    socket.receive(request); // Wait for packet
+//
+//                    String received = new String(request.getData(), 0, request.getLength());
+//                    System.out.println("Received: " + received);
+//
+//                    String response = "Echo: " + received;
+//                    byte[] responseData = response.getBytes();
+//
+//                    DatagramPacket responsePacket = new DatagramPacket(
+//                            responseData,
+//                            responseData.length,
+//                            request.getAddress(),
+//                            request.getPort()
+//                    );
+//                    socket.send(responsePacket); // Respond immediately
+//                } catch (IOException e) {
+//                    LOGGER.log(Level.SEVERE, "Error handling UDP packet", e);
+//                }
+//            }
+//        } catch (SocketException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
+
+    public static void TCP_server(Server server) {
         int packetLength = 0;
         int packetId = 0;
         int protocolVersion = DEFAULT_PROTOCOL_VERSION;
@@ -81,25 +128,35 @@ public class FakeMinecraftServer {
                         // === Handshake Packet ===
                         packetLength = readVarInt(in);
                         packetLog("packetLength", packetLength);
-                        packetId = readVarInt(in);  // Should be 0 (Handshake)
-                        packetLog("packetId", packetId);
-                        protocolVersion = readVarInt(in);  // Protocol version
-                        serverAddress = readString(in);
-                        serverPort = in.readUnsignedShort();
-                        nextState = readVarInt(in);  // 1 = status, 2 = login
-                        packetLog("nextState", nextState);
+
+                        byte[] packetData = new byte[packetLength];
+                        in.readFully(packetData); // Read exactly packetLength bytes
+                        // === Now use a ByteArrayInputStream for efficient access ===
+                        ByteArrayInputStream byteStream = new ByteArrayInputStream(packetData);
+                        DataInputStream packet = new DataInputStream(byteStream);
+
+                        if (packet.available() > 0) {
+                            packetId = readVarInt(packet);  // Should be 0 (Handshake)
+                            packetLog("packetId", packetId);
+                        }
+                        if (packet.available() > 0) protocolVersion = readVarInt(packet);  // Protocol version
+                        if (packet.available() > 0) serverAddress = readString(packet);
+                        if (packet.available() > 0) serverPort = packet.readUnsignedShort();
+                        if (packet.available() > 0) {
+                            nextState = readVarInt(packet);  // 1 = status, 2 = login
+                            packetLog("nextState", nextState);
+                        }
 
 
                         if (nextState == 1 && config.handleStatusRequests) {
                             /**
-                             * Status Request
+                             * Status packet
                              *
                              *
                              */
                             int statusLength;
                             int statusPacketId = 0x00;
-                            int pingLength;
-                            int pingPacketId = 0x01;
+
 
                             try {
                                 statusLength = readVarInt(in);
@@ -111,19 +168,25 @@ public class FakeMinecraftServer {
                             }
 
                             if (in.available() > 0) {
+                                int pingLength;
+                                int pingPacketId = 0x01;
+                                long payload = 0;
+
                                 try {
                                     pingLength = readVarInt(in);
                                     pingPacketId = readVarInt(in);
+                                    payload = in.readLong();
                                 } finally {//Send a pong
                                     if (pingPacketId == 0x01) {
-                                        respondPong(in, out);
+                                        System.out.println("\tResponding to ping");
+                                        respondPong(in, out, payload);
                                     }
                                 }
                             }
 
                         } else if (nextState == 2) {
                             /**
-                             * Login request
+                             * Login packet
                              *
                              *
                              */
@@ -150,6 +213,7 @@ public class FakeMinecraftServer {
                                 }
                             }
                         }
+
                     } catch (EOFException e) {
                         LOGGER.log(Level.SEVERE, "Error reading packet (Sending status response)", e);
                         //We frequently get EOF exceptions here, we need to be ready for them
@@ -169,25 +233,12 @@ public class FakeMinecraftServer {
 
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error running server loop. Port: " + server.port, e);
-
-            try {
-                DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
-                webhook.setUsername("Watcher App");
-                webhook.setContent("Watcher app has encountered an error on port **" + server.port + "**");
-                webhook.execute();
-            } catch (Exception ignored) {
-                LOGGER.log(Level.SEVERE, "Error sending webhook" + e.getMessage());
-            }
             System.exit(1);
         }
     }
 
-    private static void respondPong(DataInputStream in, DataOutputStream out) {
+    private static void respondPong(DataInputStream in, DataOutputStream out, long payload) {
         try {
-            long payload = 0;
-            if (in.available() > 0) {
-                payload = in.readLong();
-            }
             ByteArrayOutputStream pingBuffer = new ByteArrayOutputStream();
             DataOutputStream pingPacket = new DataOutputStream(pingBuffer);
             pingPacket.writeByte(0x01); // Pong Response ID
