@@ -3,10 +3,13 @@ package com.zipCoder;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class FakeMinecraftServer {
 
     static Config config;
+    public final static Logger LOGGER = Logger.getLogger(FakeMinecraftServer.class.getName());
 
     static {
         try {
@@ -27,7 +30,7 @@ public class FakeMinecraftServer {
         System.out.println(version);
 
         java.util.concurrent.Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(
-                FakeMinecraftServer::handleMemory, 0, 1, java.util.concurrent.TimeUnit.MINUTES);
+                FakeMinecraftServer::handleMemory, 0, 5, java.util.concurrent.TimeUnit.MINUTES);
 
         for (Server server : config.servers) {
             (new Thread(() -> runServer(server))).start();
@@ -73,44 +76,49 @@ public class FakeMinecraftServer {
                     if (nextState == 1) { // status request
                         if (config.handleStatusRequests) respondWithStatus(server, in, out, protocolVersion);
                     } else if (nextState == 2) { //Login request
+                        String username = "Unknown";
 
-                        // === Login Start Packet ===
-                        packetLength = readVarInt(in);
-                        packetId = readVarInt(in);  // Should be 0 (Login Start)
-                        String username = readString(in);
-                        //packetLog("\tUser: " + username);
-
-                        // === Send Login Disconnect ===
                         try {
+                            // === Send Login Disconnect ===
                             String json = "{\"text\":\"" + config.rejectMessage + "\"}";
                             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                             DataOutputStream packet = new DataOutputStream(buffer);
                             packet.writeByte(0x00); // Login Disconnect packet ID
                             writeString(packet, json);
                             sendPacket(out, buffer.toByteArray());
+
+                            // === Login Start Packet ===
+                            //We dont need to read the packet before we respond
+                            packetLength = readVarInt(in);
+                            packetId = readVarInt(in);  // Should be 0 (Login Start)
+                            username = readString(in);
+                            //packetLog("\tUser: " + username);
                         } catch (Exception e) {
-                            e.printStackTrace();
+                            LOGGER.log(Level.SEVERE, "Error responding to login request" + e.getMessage());
+                        } finally {
+                            try { // === Send discord webhook ===
+                                DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
+                                webhook.setUsername("Watcher App");
+                                webhook.setContent("Player **" + username + "** wants to join server **" + server.name + "**");
+                                webhook.execute();
+                            } catch (Exception e) {
+                                LOGGER.log(Level.SEVERE, "Error sending webhook" + e.getMessage());
+                            }
                         }
 
-                        // === Send discord webhook ===
-                        try {
-                            DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
-                            webhook.setUsername("Watcher App");
-                            webhook.setContent("Player **" + username + "** wants to join server **" + server.name + "**");
-                            webhook.execute();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
                     }
-
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LOGGER.log(Level.SEVERE, "Error responding to client " + server.port + ": " + e.getMessage());
+                } finally {
+                    System.out.println("\tDone.");
                 }
             }
 
 
         } catch (Exception e) {
-            try {//Print/send error message
+            LOGGER.log(Level.SEVERE, "Error running server (restarting) " + server.port, e);
+
+            try {
                 String message = e.getMessage() == null ? "Unknown error" : e.getMessage();
                 DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
                 webhook.setUsername("Watcher App");
@@ -119,7 +127,6 @@ public class FakeMinecraftServer {
                     for (StackTraceElement element : e.getStackTrace()) content += element.toString() + "\n";
                 } catch (Exception ignored) {
                 }
-                System.out.println(content);
                 webhook.setContent(content);
                 webhook.execute();
             } catch (Exception ignored) {
