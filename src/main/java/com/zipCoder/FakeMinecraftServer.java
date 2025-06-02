@@ -38,8 +38,8 @@ public class FakeMinecraftServer {
     static String version = "watcher v1.5.0";
 
     private static void packetLog(String ke, Object value) {
-        String message = String.format("%s: %s", ke, value);
-        LOGGER.log(Level.INFO, message);
+        String message = String.format("\t%s: %s", ke, value);
+        System.out.println(message);
     }
 
     public static void main(String[] args) {
@@ -71,10 +71,11 @@ public class FakeMinecraftServer {
 
                     DataInputStream in = new DataInputStream(socket.getInputStream());
                     DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-                    try {
 
+                    try {
                         // === Handshake Packet ===
                         packetLength = readVarInt(in);
+                        packetLog("packetLength", packetLength);
                         packetId = readVarInt(in);  // Should be 0 (Handshake)
                         packetLog("packetId", packetId);
                         protocolVersion = readVarInt(in);  // Protocol version
@@ -82,6 +83,7 @@ public class FakeMinecraftServer {
                         serverPort = in.readUnsignedShort();
                         nextState = readVarInt(in);  // 1 = status, 2 = login
                         packetLog("nextState", nextState);
+
 
                         if (nextState == 1 && config.handleStatusRequests) {
                             /**
@@ -143,12 +145,14 @@ public class FakeMinecraftServer {
                                 }
                             }
                         }
-                    } catch (Exception e) {
-                        LOGGER.log(Level.SEVERE, "Error handling packet" + server.port, e);
+                    } catch (EOFException e) {
+                        LOGGER.log(Level.SEVERE, "Error reading packet" + server.port, e);
                         //We frequently get EOF exceptions here, we need to be ready for them
                         //We cant know what the request was, so we just send all responses
+//                        respondLoginDisconnect(out, e.getMessage());
                         respondStatus(server, protocolVersion, out);
-                        respondLoginDisconnect(out, e.getMessage());
+                    } catch (Exception e) {
+                        LOGGER.log(Level.SEVERE, "Error handling packet" + server.port, e);
                     }
                 } catch (Exception e) {
                     LOGGER.log(Level.SEVERE, "Error handling packet" + server.port, e);
