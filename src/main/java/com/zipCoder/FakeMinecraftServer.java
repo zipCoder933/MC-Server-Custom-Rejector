@@ -46,7 +46,7 @@ public class FakeMinecraftServer {
         System.out.println(version);
 
         java.util.concurrent.Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(
-                MemoryUtils::handleMemory, 0, 5, java.util.concurrent.TimeUnit.MINUTES);
+                MemoryUtils::handleMemory, 0, 1, java.util.concurrent.TimeUnit.MINUTES);
 
         for (Server server : config.servers) {
             (new Thread(() -> runServer(server))).start();
@@ -54,17 +54,22 @@ public class FakeMinecraftServer {
     }
 
     public static void runServer(Server server) {
+        int packetLength = 0;
+        int packetId = 0;
+        int protocolVersion = DEFAULT_PROTOCOL_VERSION;
+        int serverPort;
+        String serverAddress;
+        int nextState = 1;
+
         try (ServerSocket serverSocket = new ServerSocket(server.port)) {
             System.out.println("Fake server running on port " + server.port);
-
             while (true) {
-                MemoryUtils.handleMemory();
-                int packetLength = 0;
-                int packetId = 0;
-                int protocolVersion = DEFAULT_PROTOCOL_VERSION;
-                int serverPort;
-                String serverAddress;
-                int nextState = 1;
+                packetLength = 0;
+                packetId = 0;
+                protocolVersion = DEFAULT_PROTOCOL_VERSION;
+                serverPort = 0;
+                serverAddress = null;
+                nextState = 1;
 
                 try (Socket socket = serverSocket.accept()) {
                     System.out.println("Connection from " + socket.getInetAddress());
@@ -146,16 +151,16 @@ public class FakeMinecraftServer {
                             }
                         }
                     } catch (EOFException e) {
-                        LOGGER.log(Level.SEVERE, "Error reading packet" + server.port, e);
+                        LOGGER.log(Level.SEVERE, "Error reading packet (Sending status response)", e);
                         //We frequently get EOF exceptions here, we need to be ready for them
                         //We cant know what the request was, so we just send all responses
 //                        respondLoginDisconnect(out, e.getMessage());
                         respondStatus(server, protocolVersion, out);
                     } catch (Exception e) {
-                        LOGGER.log(Level.SEVERE, "Error handling packet" + server.port, e);
+                        LOGGER.log(Level.SEVERE, "Error handling packet", e);
                     }
                 } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error handling packet" + server.port, e);
+                    LOGGER.log(Level.SEVERE, "Error handling packet", e);
                 } finally {
                     System.out.println("\tDone.\n");
                 }
@@ -163,7 +168,7 @@ public class FakeMinecraftServer {
 
 
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error running server loop " + server.port, e);
+            LOGGER.log(Level.SEVERE, "Error running server loop. Port: " + server.port, e);
 
             try {
                 DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
