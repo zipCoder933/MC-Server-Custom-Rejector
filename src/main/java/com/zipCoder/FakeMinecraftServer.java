@@ -14,6 +14,7 @@ public class FakeMinecraftServer {
 
     static Config config;
     public final static Logger LOGGER = Logger.getLogger(FakeMinecraftServer.class.getName());
+    public final static int DEFAULT_PROTOCOL_VERSION = 763;
 
     static {
         try {
@@ -58,10 +59,9 @@ public class FakeMinecraftServer {
 
             while (true) {
                 MemoryUtils.handleMemory();
-
                 int packetLength = 0;
                 int packetId = 0;
-                int protocolVersion = 700;
+                int protocolVersion = DEFAULT_PROTOCOL_VERSION;
                 int serverPort;
                 String serverAddress;
                 int nextState = 1;
@@ -76,10 +76,16 @@ public class FakeMinecraftServer {
                         // === Handshake Packet ===
                         packetLength = readVarInt(in);
                         packetId = readVarInt(in);  // Should be 0 (Handshake)
+                        packetLog("packetId", packetId);
 
-//                    if (packetId > 1) return;     //We can ignore packets we dont care about to prevent errors
+                        if (in.available() > 0) protocolVersion = readVarInt(in);  // Protocol version
 
-                        protocolVersion = readVarInt(in);  // Protocol version
+                        //We can ignore packets we dont care about to prevent errors
+                        if (packetId > 1) {
+                            respondStatus(server, protocolVersion, out);
+                            return;
+                        }
+
                         serverAddress = readString(in);
                         serverPort = in.readUnsignedShort();
                         nextState = readVarInt(in);  // 1 = status, 2 = login
@@ -106,20 +112,17 @@ public class FakeMinecraftServer {
                                 }
                             }
 
-//                        if (in.available() <= 0) return;
-                            try {
-                                pingLength = readVarInt(in);
-                                pingPacketId = readVarInt(in);
-                            } finally {
-                                if (pingPacketId == 0x01) {
-                                    long payload = in.readLong();
-                                    ByteArrayOutputStream pingBuffer = new ByteArrayOutputStream();
-                                    DataOutputStream pingPacket = new DataOutputStream(pingBuffer);
-                                    pingPacket.writeByte(0x01); // Pong Response ID
-                                    pingPacket.writeLong(payload);
-                                    sendPacket(out, pingBuffer.toByteArray());
+                            if (in.available() > 0) {
+                                try {
+                                    pingLength = readVarInt(in);
+                                    pingPacketId = readVarInt(in);
+                                } finally {//Send a pong
+                                    if (pingPacketId == 0x01) {
+                                        respondPong(in, out);
+                                    }
                                 }
                             }
+
                         } else if (nextState == 2) {
                             /**
                              * Login request
@@ -157,7 +160,7 @@ public class FakeMinecraftServer {
                 } catch (Exception e) {
                     LOGGER.log(Level.SEVERE, "Error responding to client " + server.port, e);
                 } finally {
-                    System.out.println("\tDone.");
+                    System.out.println("\tDone.\n");
                 }
             }
 
@@ -176,6 +179,22 @@ public class FakeMinecraftServer {
         }
     }
 
+    private static void respondPong(DataInputStream in, DataOutputStream out) {
+        try {
+            long payload = 0;
+            if (in.available() > 0) {
+                payload = in.readLong();
+            }
+            ByteArrayOutputStream pingBuffer = new ByteArrayOutputStream();
+            DataOutputStream pingPacket = new DataOutputStream(pingBuffer);
+            pingPacket.writeByte(0x01); // Pong Response ID
+            pingPacket.writeLong(payload);
+            sendPacket(out, pingBuffer.toByteArray());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error responding with pong" + e.getMessage());
+        }
+    }
+
 
     private static void respondLoginDisconnect(DataOutputStream out, String message) {
         try {
@@ -188,7 +207,7 @@ public class FakeMinecraftServer {
             writeString(packet, json);
             sendPacket(out, buffer.toByteArray());
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error responding to login request" + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Error responding with disconnect" + e.getMessage());
         }
     }
 
