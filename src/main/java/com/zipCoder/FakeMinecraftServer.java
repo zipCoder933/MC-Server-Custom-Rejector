@@ -39,7 +39,7 @@ public class FakeMinecraftServer {
         }
     }
 
-    static String version = "watcher v1.7.0";
+    static String version = "watcher v1.8.0";
 
     private static void packetLog(String ke, Object value) {
         String message = String.format("\t%s: %s", ke, value);
@@ -127,14 +127,22 @@ public class FakeMinecraftServer {
                     try {
                         // === Handshake Packet ===
                         packetLength = readVarInt(in);
-                        packetLog("packetLength", packetLength);
+                        System.out.println("\tPacket length: " + packetLength + "\tAvailable: " + in.available());
 
+                        if (packetLength < in.available()) {
+                            LOGGER.log(Level.WARNING, "Packet length is less than available data. Sending status response.");
+                            respondStatus(server, protocolVersion, out);
+                            continue;
+                        }
+
+                        // Read packet data
                         byte[] packetData = new byte[packetLength];
                         in.readFully(packetData); // Read exactly packetLength bytes
-                        // === Now use a ByteArrayInputStream for efficient access ===
                         ByteArrayInputStream byteStream = new ByteArrayInputStream(packetData);
                         DataInputStream packet = new DataInputStream(byteStream);
 
+                        // Parse packet
+                        System.out.println("\tPacket:");
                         if (packet.available() > 0) {
                             packetId = readVarInt(packet);  // Should be 0 (Handshake)
                             packetLog("packetId", packetId);
@@ -147,8 +155,8 @@ public class FakeMinecraftServer {
                             packetLog("nextState", nextState);
                         }
 
-
                         if (nextState == 1 && config.handleStatusRequests) {
+                            System.out.println("\tResponding to status request");
                             /**
                              * Status packet
                              *
@@ -183,8 +191,8 @@ public class FakeMinecraftServer {
                                     }
                                 }
                             }
-
                         } else if (nextState == 2) {
+                            System.out.println("\tResponding to login request");
                             /**
                              * Login packet
                              *
@@ -227,6 +235,7 @@ public class FakeMinecraftServer {
                     LOGGER.log(Level.SEVERE, "Error handling packet", e);
                 } finally {
                     System.out.println("\tDone.\n");
+                    MemoryUtils.handleMemory();
                 }
             }
 
