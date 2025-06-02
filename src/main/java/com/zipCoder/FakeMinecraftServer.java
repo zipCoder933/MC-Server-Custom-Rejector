@@ -2,12 +2,10 @@ package com.zipCoder;
 
 import java.io.*;
 import java.net.*;
+import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.FileHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
+import java.util.logging.*;
 
 import static com.zipCoder.PacketUtils.*;
 
@@ -22,14 +20,32 @@ public class FakeMinecraftServer {
     public final static Logger LOGGER = Logger.getLogger(FakeMinecraftServer.class.getName());
 
 
-    public static final String VERSION = "watcher v1.8.0";
+    public static final String VERSION = "watcher v1.9.0";
     public final static int DEFAULT_PROTOCOL_VERSION = 763;
+    public static final HashMap<Server, Thread> threads = new HashMap<>();
 
     static {
         try {
             FileHandler fileHandler = new FileHandler("latest.log", true);
             fileHandler.setFormatter(new SimpleFormatter());
+            fileHandler.setLevel(Level.ALL);
             LOGGER.addHandler(fileHandler);
+            LOGGER.setLevel(Level.ALL);
+
+            // Custom ConsoleHandler for fine/finer logs with no date
+            ConsoleHandler consoleHandler = new ConsoleHandler();
+            consoleHandler.setLevel(Level.ALL); // Handle FINE and FINER only
+            consoleHandler.setFormatter(new Formatter() {
+                @Override
+                public String format(LogRecord record) {
+                    if (record.getLevel().intValue() <= Level.INFO.intValue()) {
+                        return record.getMessage() + System.lineSeparator();
+                    }
+                    return record.getLevel() + ": " + record.getMessage() + System.lineSeparator();
+                }
+            });
+            LOGGER.addHandler(consoleHandler);
+            LOGGER.setLevel(Level.ALL);
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Error setting up file handler", e);
         }
@@ -45,19 +61,41 @@ public class FakeMinecraftServer {
     }
 
 
-    private static void packetLog(String ke, Object value) {
+    private static void packetLog(Server server, String ke, Object value) {
         String message = String.format("\t%s: %s", ke, value);
-        System.out.println(message);
+        serverLog(server, message);
+    }
+
+    private static void serverLog(Server server, String message) {
+        String serverMessage = String.format("[%s]: %s", server.name, message);
+        LOGGER.log(Level.FINEST, serverMessage);
     }
 
     public static void main(String[] args) {
         System.out.println(VERSION);
 
-        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(
-                MemoryUtils::handleMemory, 0, 1, TimeUnit.MINUTES);
+        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+                    MemoryUtils.handleMemory();
+                    final StringBuilder runningThreads = new StringBuilder().append("Threads: ");
+                    threads.forEach((server, thread) -> runningThreads.append(server.name).append(": ").append(thread.isAlive()).append(",\t"));
+                    LOGGER.log(Level.FINEST, runningThreads.toString());
+                }
+                , 10, 120, TimeUnit.SECONDS);
 
         for (Server server : config.servers) {
-            (new Thread(() -> TCP_server(server))).start();
+
+            Thread thread = (new Thread(() -> {
+                try {
+                    TCP_server(server);
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Error running server loop. Port: " + server.port, e);
+                } finally {
+                    System.exit(1);
+                }
+            }));
+
+            threads.put(server, thread);
+            thread.start();
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -104,7 +142,7 @@ public class FakeMinecraftServer {
 //        }
 //    }
 
-    public static void TCP_server(Server server) {
+    public static void TCP_server(Server server) throws IOException {
         int packetLength;
         int packetId;
         int protocolVersion;
@@ -113,7 +151,7 @@ public class FakeMinecraftServer {
         int nextState;
 
         try (ServerSocket serverSocket = new ServerSocket(server.port)) {
-            System.out.println("Fake server running on port " + server.port);
+            System.out.println("Fake server (" + server.name + ") running on port " + server.port);
             while (true) {
                 packetLength = 0;
                 packetId = 0;
@@ -123,7 +161,7 @@ public class FakeMinecraftServer {
                 nextState = 1;
 
                 try (Socket socket = serverSocket.accept()) {
-                    System.out.println("Connection from " + socket.getInetAddress());
+                    serverLog(server, "Connection from " + socket.getInetAddress());
 
                     DataInputStream in = new DataInputStream(socket.getInputStream());
                     DataOutputStream out = new DataOutputStream(socket.getOutputStream());
@@ -131,7 +169,7 @@ public class FakeMinecraftServer {
                     try {
                         // === Handshake Packet ===
                         packetLength = readVarInt(in);
-                        System.out.println("\tPacket length: " + packetLength + "\tAvailable: " + in.available());
+                        serverLog(server, "\tPacket length: " + packetLength + "\tAvailable: " + in.available());
 
                         if (in.available() == 0) {//TODO: Understand why this happens
                             //Sometimes A client sends a STATUS request with 254 bytes, 0 available data
@@ -149,18 +187,18 @@ public class FakeMinecraftServer {
                         // Parse packet
                         if (packet.available() > 0) {
                             packetId = readVarInt(packet);  // Should be 0 (Handshake)
-                            packetLog("packetId", packetId);
+                            packetLog(server, "packetId", packetId);
                         }
                         if (packet.available() > 0) protocolVersion = readVarInt(packet);  // Protocol version
                         if (packet.available() > 0) serverAddress = readString(packet);
                         if (packet.available() > 0) serverPort = packet.readUnsignedShort();
                         if (packet.available() > 0) {
                             nextState = readVarInt(packet);  // 1 = status, 2 = login
-                            packetLog("nextState", nextState);
+                            packetLog(server, "nextState", nextState);
                         }
 
                         if (nextState == 1 && config.handleStatusRequests) {
-                            System.out.println("\tResponding to status request");
+                            serverLog(server, "\tResponding to status request");
                             /**
                              * Status packet
                              *
@@ -190,13 +228,13 @@ public class FakeMinecraftServer {
                                     payload = in.readLong();
                                 } finally {//Send a pong
                                     if (pingPacketId == 0x01) {
-                                        System.out.println("\tResponding to ping");
+                                        serverLog(server, "\tResponding to ping");
                                         respondPong(in, out, payload);
                                     }
                                 }
                             }
                         } else if (nextState == 2) {
-                            System.out.println("\tResponding to login request");
+                            serverLog(server, "\tResponding to login request");
                             /**
                              * Login packet
                              *
@@ -236,15 +274,10 @@ public class FakeMinecraftServer {
                 } catch (Exception e) {
                     LOGGER.log(Level.SEVERE, "Error handling packet", e);
                 } finally {
-                    System.out.println("\tDone.\n");
+                    serverLog(server, "\tDone.\n");
                     MemoryUtils.handleMemory();
                 }
             }
-
-
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error running server loop. Port: " + server.port, e);
-            System.exit(1);
         }
     }
 

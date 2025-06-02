@@ -1,5 +1,9 @@
 package com.zipCoder;
 
+import java.util.logging.Level;
+
+import static com.zipCoder.FakeMinecraftServer.LOGGER;
+
 public class MemoryUtils {
 
     private static long totalMemory, freeMemory, usedMemory, maxMemory;
@@ -17,6 +21,7 @@ public class MemoryUtils {
         // Max memory the JVM will attempt to use (in bytes)
         maxMemory = runtime.maxMemory();
         memoryPercent = (double) usedMemory / maxMemory * 100.0;
-        System.out.printf("Memory Used: %.1f%%\n", memoryPercent);
+        String message = String.format("Memory: %.1f%%", memoryPercent);
+        LOGGER.log(Level.FINEST, message);
     }
 }

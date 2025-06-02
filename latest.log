@@ -31,3 +31,66 @@ Jun 02, 2025 9:14:56 AM com.zipCoder.FakeMinecraftServer packetLog
 INFO: packetId: 0
 Jun 02, 2025 9:14:56 AM com.zipCoder.FakeMinecraftServer packetLog
 INFO: nextState: 1
+Jun 02, 2025 2:47:35 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: Connection from /127.0.0.1
+Jun 02, 2025 2:47:36 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	Packet length: 16	Available: 18
+Jun 02, 2025 2:47:36 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	packetId: 0
+Jun 02, 2025 2:47:36 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	nextState: 1
+Jun 02, 2025 2:47:36 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	Responding to status request
+Jun 02, 2025 2:47:36 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	Done.
+
+Jun 02, 2025 2:47:42 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: Connection from /127.0.0.1
+Jun 02, 2025 2:47:42 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	Packet length: 16	Available: 16
+Jun 02, 2025 2:47:42 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	packetId: 0
+Jun 02, 2025 2:47:42 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	nextState: 2
+Jun 02, 2025 2:47:42 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	Responding to login request
+Jun 02, 2025 2:47:43 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	Done.
+
+Jun 02, 2025 2:48:30 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: Connection from /127.0.0.1
+Jun 02, 2025 2:48:30 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	Packet length: 16	Available: 18
+Jun 02, 2025 2:48:30 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	packetId: 0
+Jun 02, 2025 2:48:30 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	nextState: 1
+Jun 02, 2025 2:48:30 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	Responding to status request
+Jun 02, 2025 2:48:30 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	Done.
+
+Jun 02, 2025 2:49:12 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: Connection from /127.0.0.1
+Jun 02, 2025 2:49:12 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	Packet length: 16	Available: 18
+Jun 02, 2025 2:49:12 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	packetId: 0
+Jun 02, 2025 2:49:12 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	nextState: 1
+Jun 02, 2025 2:49:12 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	Responding to status request
+Jun 02, 2025 2:49:12 PM com.zipCoder.FakeMinecraftServer serverLog
+FINEST: [Vanilla]: 	Done.
+
+Jun 02, 2025 2:52:01 PM com.zipCoder.FakeMinecraftServer lambda$main$1
+FINEST: Running threads:
+	Nexus: true
+	Portals: true
+	Vanilla: true
+
+Jun 02, 2025 2:54:00 PM com.zipCoder.MemoryUtils handleMemory
+FINEST: Memory: 0.0%
+
+Jun 02, 2025 2:54:00 PM com.zipCoder.FakeMinecraftServer lambda$main$1
+FINEST: Running threads: Nexus: true,	Portals: true,	Vanilla: true,	
