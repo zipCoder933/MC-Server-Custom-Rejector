@@ -20,7 +20,7 @@ public class FakeMinecraftServer {
         }
     }
 
-    static String version = "watcher v1.3.0";
+    static String version = "watcher v1.4.0";
 
     private static void packetLog(String message) {
         System.out.println(message);
