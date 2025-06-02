@@ -39,7 +39,7 @@ public class FakeMinecraftServer {
 
     private static void packetLog(String ke, Object value) {
         String message = String.format("%s: %s", ke, value);
-        LOGGER.log(Level.FINE, message);
+        LOGGER.log(Level.INFO, message);
     }
 
     public static void main(String[] args) {
@@ -77,20 +77,11 @@ public class FakeMinecraftServer {
                         packetLength = readVarInt(in);
                         packetId = readVarInt(in);  // Should be 0 (Handshake)
                         packetLog("packetId", packetId);
-
-                        if (in.available() > 0) protocolVersion = readVarInt(in);  // Protocol version
-
-                        //We can ignore packets we dont care about to prevent errors
-                        if (packetId > 1) {
-                            respondStatus(server, protocolVersion, out);
-                            return;
-                        }
-
+                        protocolVersion = readVarInt(in);  // Protocol version
                         serverAddress = readString(in);
                         serverPort = in.readUnsignedShort();
                         nextState = readVarInt(in);  // 1 = status, 2 = login
                         packetLog("nextState", nextState);
-
 
                         if (nextState == 1 && config.handleStatusRequests) {
                             /**
@@ -153,12 +144,14 @@ public class FakeMinecraftServer {
                             }
                         }
                     } catch (Exception e) {
-                        LOGGER.log(Level.SEVERE, "Error responding to client " + server.port, e);
-                        LOGGER.info("Writing disconnect packet");
+                        LOGGER.log(Level.SEVERE, "Error handling packet" + server.port, e);
+                        //We frequently get EOF exceptions here, we need to be ready for them
+                        //We cant know what the request was, so we just send all responses
+                        respondStatus(server, protocolVersion, out);
                         respondLoginDisconnect(out, e.getMessage());
                     }
                 } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error responding to client " + server.port, e);
+                    LOGGER.log(Level.SEVERE, "Error handling packet" + server.port, e);
                 } finally {
                     System.out.println("\tDone.\n");
                 }
