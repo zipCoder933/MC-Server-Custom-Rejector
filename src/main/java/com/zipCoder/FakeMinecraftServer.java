@@ -227,7 +227,7 @@ public class FakeMinecraftServer {
                         }
 
                     } catch (Exception e) {
-                        LOGGER.log(Level.SEVERE, "Error reading packet (Sending status response)", e);
+                        LOGGER.log(Level.SEVERE, "Error handling packet (Sending status response)", e);
                         //We frequently get EOF exceptions here, we need to be ready for them
                         //We cant know what the request was, so we just send all responses
                         respondStatus(server, protocolVersion, out);
