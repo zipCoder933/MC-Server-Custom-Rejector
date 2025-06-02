@@ -12,7 +12,9 @@ import java.util.logging.SimpleFormatter;
 import static com.zipCoder.PacketUtils.*;
 
 /**
- * New-NetIPAddress -IPAddress 192.168.1.100 -PrefixLength 24 -DefaultGateway 192.168.0.1 -InterfaceIndex 4
+ * New-NetIPAddress -IPAddress 192.168.1.100 -PrefixLength 24 -DefaultGateway 192.168.1.1 -InterfaceIndex 4
+ *
+ * (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -ne $null}).IPAddress
  */
 public class FakeMinecraftServer {
 
@@ -129,7 +131,7 @@ public class FakeMinecraftServer {
                         packetLength = readVarInt(in);
                         System.out.println("\tPacket length: " + packetLength + "\tAvailable: " + in.available());
 
-                        if (packetLength < in.available()) {
+                        if (packetLength > in.available()) { //Sometimes we get packets that are larger than the available data (254 bytes)
                             LOGGER.log(Level.WARNING, "Packet length is less than available data. Sending status response.");
                             respondStatus(server, protocolVersion, out);
                             continue;
@@ -142,7 +144,6 @@ public class FakeMinecraftServer {
                         DataInputStream packet = new DataInputStream(byteStream);
 
                         // Parse packet
-                        System.out.println("\tPacket:");
                         if (packet.available() > 0) {
                             packetId = readVarInt(packet);  // Should be 0 (Handshake)
                             packetLog("packetId", packetId);
