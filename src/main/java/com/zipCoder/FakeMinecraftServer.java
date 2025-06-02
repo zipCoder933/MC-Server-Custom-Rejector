@@ -43,6 +43,14 @@ public class FakeMinecraftServer {
 
             while (true) {
                 handleMemory();
+
+                int packetLength = 0;
+                int packetId;
+                int protocolVersion = 700;
+                int serverPort;
+                String serverAddress;
+                int nextState = 1;
+
                 try (Socket socket = serverSocket.accept()) {
                     System.out.println("Connection from " + socket.getInetAddress());
 
@@ -50,49 +58,67 @@ public class FakeMinecraftServer {
                     DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
                     // === Handshake Packet ===
-                    int packetLength = readVarInt(in);
-                    //packetLog("\tPacket Length: " + packetLength);
-                    int packetId = readVarInt(in);  // Should be 0 (Handshake)
-                    //packetLog("\tPacket ID: " + packetId);
+                    packetLength = readVarInt(in);
+                    packetId = readVarInt(in);  // Should be 0 (Handshake)
 
-                    //We can ignore packets we dont care about to prevent errors
-                    if (packetId != 0 && packetId != 1) return;
-                    /**
-                     * Handshake (packet ID 0) — to get the protocol version and next state,
-                     * Status packets (e.g., status request ID 0, ping ID 1),
-                     * Player connection packets (usually Login Start packet with a specific ID),
-                     */
+//                    if (packetId > 1) return;     //We can ignore packets we dont care about to prevent errors
 
-                    int protocolVersion = readVarInt(in);  // Protocol version
-                    //packetLog("\tProtocol Version: " + protocolVersion);
-                    String serverAddress = readString(in);
-                    //packetLog("\tServer Address: " + serverAddress);
-                    int serverPort = in.readUnsignedShort();
-                    //packetLog("\tServer Port: " + serverPort);
-                    int nextState = readVarInt(in);  // 1 = status, 2 = login
-                    //packetLog("\tNext State: " + nextState);
+                    protocolVersion = readVarInt(in);  // Protocol version
+                    serverAddress = readString(in);
+                    serverPort = in.readUnsignedShort();
+                    nextState = readVarInt(in);  // 1 = status, 2 = login
 
 
-                    if (nextState == 1) { // status request
-                        if (config.handleStatusRequests) respondWithStatus(server, in, out, protocolVersion);
-                    } else if (nextState == 2) { //Login request
-                        String username = "Unknown";
+                    if (nextState == 1 && config.handleStatusRequests) {
+                        /**
+                         * Status Request
+                         *
+                         *
+                         */
+                        int statusLength;
+                        int statusPacketId = 0x00;
+                        int pingLength;
+                        int pingPacketId = 0x01;
 
                         try {
+                            statusLength = readVarInt(in);
+                            statusPacketId = readVarInt(in);
+                        } finally {
+                            if (statusPacketId == 0x00) {
+                                respondStatus(server, protocolVersion, out);
+                            }
+                        }
+
+//                        if (in.available() <= 0) return;
+                        try {
+                            pingLength = readVarInt(in);
+                            pingPacketId = readVarInt(in);
+                        } finally {
+                            if (pingPacketId == 0x01) {
+                                long payload = in.readLong();
+                                ByteArrayOutputStream pingBuffer = new ByteArrayOutputStream();
+                                DataOutputStream pingPacket = new DataOutputStream(pingBuffer);
+                                pingPacket.writeByte(0x01); // Pong Response ID
+                                pingPacket.writeLong(payload);
+                                sendPacket(out, pingBuffer.toByteArray());
+                            }
+                        }
+                    } else if (nextState == 2) {
+                        /**
+                         * Login request
+                         *
+                         *
+                         */
+                        String username = "Unknown";
+                        try {
                             // === Send Login Disconnect ===
-                            String json = "{\"text\":\"" + config.rejectMessage + "\"}";
-                            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-                            DataOutputStream packet = new DataOutputStream(buffer);
-                            packet.writeByte(0x00); // Login Disconnect packet ID
-                            writeString(packet, json);
-                            sendPacket(out, buffer.toByteArray());
+                            respondLoginDisconnect(out, config.rejectMessage);
 
                             // === Login Start Packet ===
                             //We dont need to read the packet before we respond
                             packetLength = readVarInt(in);
                             packetId = readVarInt(in);  // Should be 0 (Login Start)
                             username = readString(in);
-                            //packetLog("\tUser: " + username);
                         } catch (Exception e) {
                             LOGGER.log(Level.SEVERE, "Error responding to login request" + e.getMessage());
                         } finally {
@@ -105,10 +131,13 @@ public class FakeMinecraftServer {
                                 LOGGER.log(Level.SEVERE, "Error sending webhook" + e.getMessage());
                             }
                         }
-
                     }
                 } catch (Exception e) {
                     LOGGER.log(Level.SEVERE, "Error responding to client " + server.port + ": " + e.getMessage());
+
+                    respondStatus(server, protocolVersion, null);
+                    respondLoginDisconnect(null, e.getMessage());
+
                 } finally {
                     System.out.println("\tDone.");
                 }
@@ -141,6 +170,7 @@ public class FakeMinecraftServer {
         }
     }
 
+
     private static long totalMemory, freeMemory, usedMemory, maxMemory;
     private static double memoryPercent;
     private static final Runtime runtime = Runtime.getRuntime();
@@ -159,45 +189,38 @@ public class FakeMinecraftServer {
         System.out.printf("Memory Used: %.2f%%\n", memoryPercent);
     }
 
-    private static void respondWithStatus(Server server, DataInputStream in, DataOutputStream out, int protocolVersion) throws IOException {
-        // Wait for Status Request packet (ID 0x00)
-        int statusLength = readVarInt(in);
-        //packetLog("\tStatus Length: " + statusLength);
-        int statusPacketId = readVarInt(in);
-        //packetLog("\tStatus Packet ID: " + statusPacketId);
-        if (statusPacketId == 0x00) {
-            // Build response JSON
-            String responseJson = "{"
-                    + "\"version\":{\"name\":\"" + server.version + "\",\"protocol\":" + protocolVersion + "},"
-                    + "\"players\":{\"max\":" + server.maxPlayers + ",\"online\":0,\"sample\":[]},"
-                    + "\"description\":{\"text\":\"" + server.title + "\"}"
-                    + "}";
-
-            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-            DataOutputStream packet = new DataOutputStream(buffer);
-            packet.writeByte(0x00); // Status Response ID
-            writeString(packet, responseJson);
-            sendPacket(out, buffer.toByteArray());
-        }
-
-        // Wait for Ping packet (ID 0x01) and respond with Pong
-        if (in.available() <= 0) {
-            return; // Wait until there's data
-        }
-
-        int pingLength = readVarInt(in);
-        //packetLog("\tPing Length: " + pingLength);
-        int pingPacketId = readVarInt(in);
-        //packetLog("\tPing Packet ID: " + pingPacketId);
-        if (pingPacketId == 0x01) {
-            long payload = in.readLong();
-            ByteArrayOutputStream pingBuffer = new ByteArrayOutputStream();
-            DataOutputStream pingPacket = new DataOutputStream(pingBuffer);
-            pingPacket.writeByte(0x01); // Pong Response ID
-            pingPacket.writeLong(payload);
-            sendPacket(out, pingBuffer.toByteArray());
-        }
+    private static void respondLoginDisconnect(DataOutputStream out, String message) throws IOException {
+        String json = "{\"text\":\"" + message + "\"}";
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        DataOutputStream packet = new DataOutputStream(buffer);
+        packet.writeByte(0x00); // Login Disconnect packet ID
+        writeString(packet, json);
+        sendPacket(out, buffer.toByteArray());
     }
+
+    private static void respondStatus(Server server, int protocolVersion, DataOutputStream out) throws IOException {
+        // Build response JSON
+        String responseJson = "{"
+                + "\"version\":{\"name\":\"" + server.version + "\",\"protocol\":" + protocolVersion + "},"
+                + "\"players\":{\"max\":" + server.maxPlayers + ",\"online\":0,\"sample\":[]},"
+                + "\"description\":{\"text\":\"" + server.title + "\"}"
+                + "}";
+
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        DataOutputStream packet = new DataOutputStream(buffer);
+        packet.writeByte(0x00); // Status Response ID
+        writeString(packet, responseJson);
+        sendPacket(out, buffer.toByteArray());
+    }
+
+
+    //=============================================================================================================================
+    //=============================================================================================================================
+    //=============================================================================================================================
+    //=============================================================================================================================
+    //=============================================================================================================================
+    //=============================================================================================================================
+
 
     // Helper methods
     static void sendPacket(DataOutputStream out, byte[] data) throws IOException {
