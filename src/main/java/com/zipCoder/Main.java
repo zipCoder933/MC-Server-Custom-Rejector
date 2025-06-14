@@ -1,5 +1,7 @@
 package com.zipCoder;
 
+import com.zipCoder.closeAndWakeUpServer.WakeUpHandler;
+
 import java.io.*;
 import java.net.*;
 import java.nio.file.Files;
@@ -16,15 +18,16 @@ import static com.zipCoder.PacketUtils.*;
  * <p>
  * (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -ne $null}).IPAddress
  */
-public class FakeMinecraftServer {
+public class Main {
 
-    static Config config;
-    public final static Logger LOGGER = Logger.getLogger(FakeMinecraftServer.class.getName());
+    public static Config config;
+    public final static Logger LOGGER = Logger.getLogger(Main.class.getName());
 
 
     public static final String VERSION = "watcher v1.9.0";
     public final static int DEFAULT_PROTOCOL_VERSION = 763;
     public static final HashMap<Server, Thread> threads = new HashMap<>();
+    public static final WakeUpHandler wakeUpHandler = new WakeUpHandler();
 
     static {
         try {
@@ -247,7 +250,7 @@ public class FakeMinecraftServer {
                             String username = "Unknown";
                             try {
                                 // === Send Login Disconnect ===
-                                respondLoginDisconnect(out, config.rejectMessage);
+                                respondLoginDisconnect(out, makeRegectMessage());
 
                                 // === Login Start Packet ===
                                 //We dont need to read the packet before we respond
@@ -257,14 +260,9 @@ public class FakeMinecraftServer {
                             } catch (Exception e) {
                                 LOGGER.log(Level.SEVERE, "Error responding to login request" + e.getMessage());
                             } finally {
-                                try { // === Send discord webhook ===
-                                    DiscordWebhook webhook = new DiscordWebhook(config.discordWebhook);
-                                    webhook.setUsername("Watcher App");
-                                    webhook.setContent("Player **" + username + "** wants to join server **" + server.name + "**");
-                                    webhook.execute();
-                                } catch (Exception e) {
-                                    LOGGER.log(Level.SEVERE, "Error sending webhook" + e.getMessage());
-                                }
+                                // === Send discord webhook ===
+                                sendSimpleWebhook("Player **" + username + "** wants to join server **" + server.name + "**");
+                                wakeUpHandler.start();
                             }
                         }
 
@@ -283,6 +281,16 @@ public class FakeMinecraftServer {
                 }
             }
         }
+    }
+
+    private static String makeRegectMessage() {
+        String message = config.rejectMessage;
+
+        if (wakeUpHandler.failedToExecWakeCommand > 0)
+            message += "\nFailed to wake up server. " + wakeUpHandler.failedToExecWakeCommand + " times.";
+        if (wakeUpHandler.failedToGetServerConnection > 0)
+            message += "\nFailed to get server connection. " + wakeUpHandler.failedToGetServerConnection + " times.";
+        return message;
     }
 
     private static void respondPong(DataInputStream in, DataOutputStream out, long payload) {
@@ -329,6 +337,17 @@ public class FakeMinecraftServer {
             sendPacket(out, buffer.toByteArray());
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error responding with status" + e.getMessage());
+        }
+    }
+
+    public static void sendSimpleWebhook(String s) {
+        try {
+            DiscordWebhook hook = new DiscordWebhook(Main.config.discordWebhook);
+            hook.setUsername("Watcher App");
+            hook.setContent(s);
+            hook.execute();
+        } catch (IOException e) {
+            Main.LOGGER.log(Level.SEVERE, "Error sending webhook", e);
         }
     }
 }

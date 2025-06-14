@@ -2,7 +2,7 @@ package com.zipCoder;
 
 import java.util.logging.Level;
 
-import static com.zipCoder.FakeMinecraftServer.LOGGER;
+import static com.zipCoder.Main.LOGGER;
 
 public class MemoryUtils {
 

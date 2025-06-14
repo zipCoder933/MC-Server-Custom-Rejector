@@ -13,8 +13,8 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 
 public class Config {
-    public String discordWebhook = "https://discordapp.com/api/webhooks/1377479606822506656/F8vv6GxZrJ8VAs8sO7ZKAlRTKDHOaqRP2LJrjZgDPY3iw4WLf24SUFJc8aFL1UYg3Uen";
-    public String rejectMessage = "§cHang tight! The server should be up and running soon.";
+    public String discordWebhook = "https://discordapp.com/api/webhooks/1382226893104873613/HlmbOW03_fXYDL4FWKBaBhHwddT938srdyrmR6u6MVM6bGM1Js4cwcaj1iEaNeKZ8EXg";
+    public String rejectMessage = "§aHang tight! The server should be up and running soon.";
     public Server[] servers = new Server[]{
             new Server("Vanilla", 25565, "1.20.1",  "A Minecraft Server", 20)
     };
